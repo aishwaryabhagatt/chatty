@@ -1,10 +1,13 @@
 import streamlit as st
 import pandas as pd
-import random
 
 class ChatBot:
     def __init__(self, dataset_path):
-        self.dataset = pd.read_csv(dataset_path)
+        try:
+            self.dataset = pd.read_csv(dataset_path)
+        except FileNotFoundError:
+            st.error(f"File '{dataset_path}' not found. Please make sure the file exists.")
+            st.stop()
 
     def generate_response(self, user_input):
         user_input = user_input.lower()
