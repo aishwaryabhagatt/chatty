@@ -22,7 +22,7 @@ def main():
     st.title("ChatBot")
     st.write("Welcome to the ChatBot! Type your message below.")
 
-    chatbot = ChatBot("mentalhealth.csv")
+    chatbot = ChatBot("C:/Users/Sumit/Desktop/mentalhealth.csv")
 
     user_input = st.text_input("You:", "")
     if user_input:
