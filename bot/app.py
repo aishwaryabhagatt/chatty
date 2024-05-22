@@ -1,10 +1,10 @@
+import streamlit as st
 import re
 import numpy as np
 import pandas as pd
 from tensorflow.keras.models import load_model
 from keras.layers import Input, LSTM, Dense
 from keras.models import Model
-import matplotlib.pyplot as plt
 
 class ChatBot:
     def __init__(self):
@@ -26,32 +26,8 @@ class ChatBot:
         self.num_encoder_tokens = 0
         self.num_decoder_tokens = 0
         self.dimensionality = 256
-        self.batch_size = 10
-        self.epochs = 500
 
-    def load_data(self, path_to_csv):
-        data = pd.read_csv(path_to_csv)
-        self.input_docs = data['Questions'].tolist()
-        self.target_docs = data['Answers'].tolist()
-
-    def preprocess_data(self):
-        for input_doc, target_doc in zip(self.input_docs, self.target_docs):
-            target_doc = " ".join(re.findall(r"[\w']+|[^\s\w]", target_doc))
-            target_doc = '<START> ' + target_doc + ' <END>'
-            self.input_tokens.update(re.findall(r"[\w']+|[^\s\w]", input_doc))
-            self.target_tokens.update(target_doc.split())
-        self.input_tokens = sorted(list(self.input_tokens))
-        self.target_tokens = sorted(list(self.target_tokens))
-        self.num_encoder_tokens = len(self.input_tokens)
-        self.num_decoder_tokens = len(self.target_tokens)
-        self.max_encoder_seq_length = max([len(re.findall(r"[\w']+|[^\s\w]", input_doc)) for input_doc in self.input_docs])
-        self.max_decoder_seq_length = max([len(re.findall(r"[\w']+|[^\s\w]", target_doc)) for target_doc in self.target_docs])
-        self.input_features_dict = dict([(token, i) for i, token in enumerate(self.input_tokens)])
-        self.target_features_dict = dict([(token, i) for i, token in enumerate(self.target_tokens)])
-        self.reverse_input_features_dict = dict((i, token) for token, i in self.input_features_dict.items())
-        self.reverse_target_features_dict = dict((i, token) for token, i in self.target_features_dict.items())
-
-    def load_seq2seq_model(self):
+    def load_model(self):
         self.training_model = load_model('training_model.h5')
         encoder_inputs = self.training_model.input[0]
         encoder_outputs, state_h_enc, state_c_enc = self.training_model.layers[2].output
@@ -87,17 +63,6 @@ class ChatBot:
             states_value = [hidden_state, cell_state]
         return decoded_sentence.replace("<START>", '').replace("<END>", '')
 
-    def start_chat(self):
-        user_response = input("Hi, I'm a chatbot trained on random dialogs. AMA!\n")
-        if user_response.lower() in self.negative_responses:
-            print("Ok, have a great day!")
-            return
-        while True:
-            user_response = input(self.generate_response(user_response) + "\n")
-            if self.make_exit(user_response):
-                print("Ok, have a great day!")
-                break
-
     def string_to_matrix(self, user_input):
         tokens = re.findall(r"[\w']+|[^\s\w]", user_input)
         user_input_matrix = np.zeros(
@@ -108,19 +73,30 @@ class ChatBot:
                 user_input_matrix[0, timestep, self.input_features_dict[token]] = 1.
         return user_input_matrix
 
-    def generate_response(self, user_input):
-        input_matrix = self.string_to_matrix(user_input)
-        return self.decode_response(input_matrix)
+    def make_exit(self, reply):
+        return any(cmd in reply.lower() for cmd in self.exit_commands)
 
-    def make_exit(self, user_input):
-        return any(cmd in user_input.lower() for cmd in self.exit_commands)
+def main():
+    st.title("ChatBot")
+    st.write("Welcome to the ChatBot! Type your message below.")
 
-# Initialize and run the chatbot
-if __name__ == "__main__":
     chatbot = ChatBot()
-    chatbot.load_data('mentalhealth.csv')
+    chatbot.load_model()
+
+    # Load dataset
+    data = pd.read_csv("mentalhealth.csv")
+    chatbot.input_docs = data['Questions'].tolist()
+    chatbot.target_docs = data['Answers'].tolist()
     chatbot.preprocess_data()
-    chatbot.load_seq2seq_model()
-    chatbot.start_chat()
 
+    user_input = st.text_input("You:", "")
+    if user_input:
+        if chatbot.make_exit(user_input):
+            st.write("ChatBot: Ok, have a great day!")
+        else:
+            input_matrix = chatbot.string_to_matrix(user_input)
+            response = chatbot.decode_response(input_matrix)
+            st.write("ChatBot:", response)
 
+if __name__ == "__main__":
+    main()
