@@ -5,7 +5,6 @@ from tensorflow.keras.models import load_model
 from keras.layers import Input, LSTM, Dense
 from keras.models import Model
 import matplotlib.pyplot as plt
-from tensorflow import keras
 
 class ChatBot:
     def __init__(self):
@@ -123,4 +122,5 @@ if __name__ == "__main__":
     chatbot.preprocess_data()
     chatbot.load_seq2seq_model()
     chatbot.start_chat()
+
 
